@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+
+    <style>
+        canvas {
+            /* all four are needed to support the most browsers */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="snakeGameContainer"></canvas>
+
+    <script>
+
+        
+
+        // Food size constants
+        // const LOW_FOOD      = Math.floor(scaling / 4 * 0.7);
+        // const MEDIUM_FOOD   = Math.floor(scaling / 3 * 0.7);
+        // const GOOD_FOOD     = Math.floor(scaling / 2 * 0.7);
+        // const AWESOME_FOOD  = Math.floor(scaling * 0.7);
+
+        class Board{
+            constructor(x, y, scaling, canvas = "snakeGameContainer"){
+                this.x = x
+                this.y = y
+                this.scaling = scaling
+                this.board = []
+                this.canvas = document.getElementById(canvas)
+                this.initBoard()
+                this.ctx = this.initCanvas()
+                this.isGameOver = false
+                this.isFoodOnBoard = false
+                this.spawnFood()
+            }
+
+            spawnFood(){
+                if(!this.isFoodOnBoard){
+                    let coordinates = null
+                    do{
+                        coordinates = this.getRandomCoordinate() 
+                    }while(this.board[coordinates[0]][coordinates[1]] != 0)
+                    this.addFood(coordinates)
+                }
+            }
+
+            initBoard(){
+                let newBoard = []
+                for(var i = 0; i < this.x; i++){
+                    newBoard.push([])
+                    for(var j = 0; j < this.y; j++)
+                        newBoard[i].push(0)
+                }
+                this.board = newBoard
+            }
+
+            initCanvas(){
+                this.canvas.width = this.x * this.scaling
+                this.canvas.height = this.y * this.scaling
+                return this.canvas.getContext("2d");
+            }
+
+            clearBoard(){
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+            }
+
+            updateSnake(snake){
+                let spawnFood = false;
+                if(this.checkCollision(snake.snake_arr)){
+                    this.removeSnake()
+
+                    if(this.board[snake.snake_arr[0][0]][snake.snake_arr[0][1]] == 1){
+                        snake.grow()
+                        spawnFood = true
+                        
+                    }
+
+                    for(let i in snake.snake_arr){
+                        this.board[snake.snake_arr[i][0]][snake.snake_arr[i][1]] = 2
+                    }
+                    if(spawnFood) this.spawnFood()
+                    this.redrawBoard()
+                }else{
+                    this.gameOver()
+                }
+            }
+
+            gameOver(){
+                this.isGameOver = true;
+                console.log("Game Over")
+            }
+
+            checkCollision(snake){
+                if(snake.length != new Set(snake.map(a => JSON.stringify(a))).size) return false
+                if(snake[0][0] < 0 || snake[0][0] == this.x) return false;
+                if(snake[0][1] < 0 || snake[0][1] == this.y) return false;
+                
+                return true;
+            }
+
+            removeSnake(){
+                for(let i in this.board){
+                    for(let j in this.board[i]){
+                        if(this.board[i][j] == 2){
+                            this.board[i][j] = 0
+                        }
+                    }
+                }
+            }
+
+            drawBoard(){
+                for(let i in this.board){
+                    for(let j in this.board[i]){
+                        if(this.board[i][j] != 0){
+                            if(this.board[i][j] == 2){
+                                this.draw(i, j, this.scaling, "red")
+                            }else{
+                                this.draw(i, j, this.scaling * 0.7)
+                            }
+                        }
+                    }
+                }
+            }
+
+            draw(x, y, size, color = null){
+                this.ctx.fillStyle = color || this.getRandomColor();
+                x = x * this.scaling + Math.floor(this.scaling / 2) - size / 2;
+                y = y * this.scaling + Math.floor(this.scaling / 2) - size / 2;
+                this.ctx.fillRect(x, y, size, size);
+            }
+
+            getRandomColor(){
+                return "black";
+            }
+
+            redrawBoard(){
+                this.clearBoard();
+                this.drawBoard();
+            }
+
+            addFood(coordinates){
+                this.board[coordinates[0]][coordinates[1]] = 1
+                this.redrawBoard();
+            }
+
+            getRandomCoordinate(){
+                return [Math.floor(Math.random() * this.x), Math.floor(Math.random() * this.y)]
+            }
+        }
+
+
+
+        class Snake{
+            constructor(board){
+                this.snake_arr = [[board.x / 2 - 1, board.y / 2 - 1]]
+                this.hasEaten = 0
+                this.currentDirection = null
+                board.updateSnake(this)
+
+                this.constants = {
+                    MOVE_LEFT: [-1, 0],
+                    MOVE_RIGHT: [1, 0],
+                    MOVE_UP: [0, -1],
+                    MOVE_DOWN: [0, 1]
+                }
+            }
+
+            grow(){
+                this.hasEaten += 1
+                // this.snake_arr.push(this.snake_arr[this.snake_arr.length - 1])
+            }
+
+            oppositeDirection(direction){
+                let cd = "" + this.currentDirection
+                switch("" + direction){
+                    case "-1,0":
+                        return cd == "1,0"
+                    case "1,0":
+                        return cd == "-1,0"
+                    case "0,-1":
+                        return cd == "0,1"
+                    case "0,1":
+                        return cd == "0,-1"
+                }
+            }
+
+            move(direction){
+                if(this.oppositeDirection(direction)){
+                    direction = this.currentDirection
+                } else{
+                    this.currentDirection = direction
+                }
+                let head = this.snake_arr[0]
+                let newHead = [head[0] + direction[0], head[1] + direction[1]]
+                this.snake_arr.unshift(newHead)
+                if(this.hasEaten == 0) {
+                    this.snake_arr.pop()
+                }else{
+                    this.hasEaten -= 1
+                }
+                // let tail = this.snake_arr[this.snake_arr.length - 1]
+                // let newTail = [tail[0], tail[1]]
+                // for(let i = 0; i < this.snake_arr.length; i++){
+                //     this.snake_arr[i][0] += direction[0]
+                //     this.snake_arr[i][1] += direction[1]
+                // }
+                // if(this.hasEaten > 0){
+                //     this.hasEaten -= 1
+                //     this.snake_arr.push(newTail)
+                // }
+                board.updateSnake(this)
+            }
+
+            // afterMove(){
+            //     board.updateSnake(this)
+            // }
+            // beforeMove(){
+
+            // }
+
+            // moveLeft(){
+            //     this.beforeMove()
+            //     for(let i = 0; i < this.snake_arr.length; i++){
+            //         this.snake_arr[i][0] -= 1
+            //     }
+            //     this.afterMove()
+            // }
+
+            // moveRight(){
+            //     for(let i = 0; i < this.snake_arr.length; i++){
+            //         this.snake_arr[i][0] += 1
+            //     }
+            //     this.moved()
+            // }
+
+            // moveUp(){
+            //     for(let i = 0; i < this.snake_arr.length; i++){
+            //         this.snake_arr[i][1] -= 1
+            //     }
+            //     this.moved()
+            // }
+
+            // moveDown(){
+            //     for(let i = 0; i < this.snake_arr.length; i++){
+            //         this.snake_arr[i][1] += 1
+            //     }
+            //     this.moved()
+            // }
+
+            noMove(){}
+        }
+
+        // var snake = new Snake(realBoardSize, scaling)
+        
+        var board = new Board(30, 20, 10)
+        var snake = new Snake(board)
+
+        // for(i = 0; i < boardSize[0] / scaling; i++){
+        //     draw(i, 0, scaling)
+        // }
+
+        // drawFood(29, 0, AWESOME_FOOD)
+        // drawFood(1, 0, AWESOME_FOOD)
+        // drawFood(2, 0, GOOD_FOOD)
+        // drawFood(3, 0, MEDIUM_FOOD)
+
+        var lastDirection = null;
+
+        document.onkeypress = function (e) {
+            e = e || window.event;
+            if(e.key == 'a') {
+                lastDirection = snake.constants.MOVE_LEFT
+            }
+            if(e.key == 'd') {
+                lastDirection = snake.constants.MOVE_RIGHT
+            }
+            if(e.key == 'w') 
+                lastDirection = snake.constants.MOVE_UP
+            if(e.key == 's') 
+                lastDirection = snake.constants.MOVE_DOWN
+        };
+
+        var movementInterval = setInterval(function(){
+            if(board.isGameOver){
+                clearInterval(movementInterval)
+            }else{
+                if(lastDirection)
+                    snake.move(lastDirection)
+            }
+        }, 100)
+        
+    </script>
+</body>
+</html>
