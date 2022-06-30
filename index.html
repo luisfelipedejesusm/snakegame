@@ -15,10 +15,31 @@
             image-rendering: crisp-edges;
             border: 1px solid black;
         }
+
+        #game-details{
+            position: fixed;
+            width: 20%;
+            right: 0;
+            height: 100%;
+            top: 0;
+            padding: 10px 20px;
+            margin: 15px;
+        }
     </style>
 </head>
 <body>
     <canvas id="snakeGameContainer"></canvas>
+
+    <div id="game-details">
+        <h2>Score</h2>
+        <p><b>
+            <span id="score-container">0</span>
+        </b></p>
+    </div>
+
+    <div>
+        Controls are w -> up, s -> down, a -> left, d -> right
+    </div>
 
     <script>
 
@@ -42,6 +63,7 @@
                 this.isGameOver = false
                 this.isFoodOnBoard = false
                 this.spawnFood()
+                this.scoreBoard = document.getElementById("score-container")
             }
 
             spawnFood(){
@@ -80,9 +102,10 @@
                     this.removeSnake()
 
                     if(this.board[snake.snake_arr[0][0]][snake.snake_arr[0][1]] == 1){
-                        snake.grow()
+                        let foodScore = Math.floor(Math.random() * 10) + 1
+                        snake.grow(foodScore)
                         spawnFood = true
-                        
+                        this.updateScore(foodScore)
                     }
 
                     for(let i in snake.snake_arr){
@@ -95,9 +118,14 @@
                 }
             }
 
+            updateScore(score){
+                this.scoreBoard.innerHTML = parseInt(this.scoreBoard.innerHTML) + score
+            }
+
             gameOver(){
                 this.isGameOver = true;
-                console.log("Game Over")
+                if (confirm("Game Over, you scored " + this.scoreBoard.innerHTML + ". Do u wanna play again?"))
+                    location.reload()
             }
 
             checkCollision(snake){
@@ -175,8 +203,8 @@
                 }
             }
 
-            grow(){
-                this.hasEaten += 1
+            grow(size){
+                this.hasEaten += size
                 // this.snake_arr.push(this.snake_arr[this.snake_arr.length - 1])
             }
 
@@ -262,7 +290,7 @@
 
         // var snake = new Snake(realBoardSize, scaling)
         
-        var board = new Board(30, 20, 10)
+        var board = new Board(100, 50, window.innerWidth * .75 / 100)
         var snake = new Snake(board)
 
         // for(i = 0; i < boardSize[0] / scaling; i++){
